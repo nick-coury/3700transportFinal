@@ -1,6 +1,6 @@
 #!/usr/bin/env -S python3 -u
 
-import argparse, socket, time, json, select, struct, sys, math
+import argparse, socket, time, json, select, struct, sys, math, zlib
 
 class Receiver:
     def __init__(self):
@@ -47,20 +47,18 @@ class Receiver:
                 # msg = type, seq, data 
                 msg = json.loads(data.decode('utf-8'))
                 self.log("------ RECIEVED A NEW PACKET " + str(msg["seq"]))
-
-                # upon receiving a message, send an ack message
-                self.send({ "type": "ack", "seq": msg["seq"] })
-                # Add all messages to a list, eventually print out entries of list in sequence order
-                
-                # if we have already seen this message, then the repeated message indicates a dropped ack 
-                #if msg in self.recv_msg :
-                    #send a copy of the ack again because we know we've received the message in self.recv_msg 
-                if msg not in self.recv_msg: 
-                    if int(msg["seq"]) >= self.print_count:
-                        self.buffer.append(msg)
-                        self.buffer.sort(key=lambda x: x["seq"])
-                        self.flush_buffer()
-                        self.recv_msg.append(msg)
+                # Assuming the message is not corrupted... 
+                if msg["checksum"] == zlib.crc32(msg["data"]):
+                    # upon receiving a message, send an ack message
+                    self.send({"type": "ack", "seq": msg["seq"]})
+                    # Add all messages to a list, eventually print out entries of list in sequence order
+                    # if we have already seen this message, then the repeated message indicates a dropped ack  
+                    if msg not in self.recv_msg: 
+                        if int(msg["seq"]) >= self.print_count:
+                            self.buffer.append(msg)
+                            self.buffer.sort(key=lambda x: x["seq"])
+                            self.flush_buffer()
+                            self.recv_msg.append(msg)
             
             # print logic 
             # for entry in self.buffer:

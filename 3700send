@@ -1,6 +1,6 @@
 #!/usr/bin/env -S python3 -u
 
-import argparse, socket, time, json, select, struct, sys, math
+import argparse, socket, time, json, select, struct, sys, math, zlib
 
 DATA_SIZE = 1375
 
@@ -60,7 +60,6 @@ class Sender:
                         self.curr_packets -= 1
                         # the message has been correctly ack'd 
                         self.ack_table[msg_dict["seq"]] = True
-                        self.log("CURRENT PACKETS IN NETWORK--------- " + str(self.curr_packets))
 
                 # if we are sending 
                 elif conn == sys.stdin:
@@ -72,7 +71,7 @@ class Sender:
                         sys.exit(0)
                     # if more data     
                     elif (len(data) != 0):
-                        msg = { "type": "msg", "seq": self.send_sequence, "data": data }
+                        msg = {"type": "msg", "seq": self.send_sequence, "data": data, "checksum": zlib.crc32(data)}
                         self.log("Sending message '%s'" % msg)
                         self.send(msg)
                         self.send_sequence += 1
