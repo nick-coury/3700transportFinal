@@ -65,7 +65,7 @@ class Sender:
                         #msg = {"type" : "ack", "ack_seq" : msg_dict["ack_seq"]}
                         #self.send(msg)
                         # increment the ack sequence 
-                        self.ack_seq += 1
+                        #self.ack_seq += 1
 
                 # if we are sending 
                 elif conn == sys.stdin:
@@ -94,10 +94,12 @@ class Sender:
                 # self.log("*** is the time >= 1 * 2? " + str(time.time() - self.rrt_log[i]))
                 # self.log("has it been ack'ed correctly? " + str(self.ack_table[i]))
                 if(time.time() - self.rrt_log[i] >= self.rrt_max) and not self.ack_table[i]:
-                        self.send(self.packet_log[i])
-                        self.rrt_log[i] = time.time()
-                        self.log("---------------- RETRANSMITTING PACKET " + str(i))
-                        self.log("Sending message '%s'" % self.packet_log[i])
+                    # because we know a packet has been dropped, we can decrement the number of packets currently in the network 
+                    self.curr_packets -= 1
+                    self.send(self.packet_log[i])
+                    self.rrt_log[i] = time.time()
+                    self.log("---------------- RETRANSMITTING PACKET " + str(i))
+                    self.log("Sending message '%s'" % self.packet_log[i])
                             
             if self.curr_packets < self.window:
                 self.waiting = False
