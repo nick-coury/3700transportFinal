@@ -44,7 +44,7 @@ At a high level, here was our approach:
 
 ## Challenges 
 
-
+Our biggest challenge in this assignment was catching dropped packets. 
 
 ## Program Features
 
@@ -65,7 +65,7 @@ After verifying that our receiver could receive out of order messages we focused
 
 Being able to detect and rememdy dropped packets allowed us to focus on corrupted packets. We used a standard library (zlib) to implement data checksum's. We then packed the data checksum into the message to be sent and had the receiver verify the checksum. 
 
-To test various latencies and bandwidths we relied on the 
+To test various latencies and bandwidths we primarily relied on the built in testing methods, but we also added many log statements to make sure each step of our code ran as intended. 
 
 
 
