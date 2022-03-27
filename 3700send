@@ -72,7 +72,7 @@ class Sender:
                     # if more data     
                     elif (len(data) != 0):
                         self.log("TYPE Of CHECKSUM: " + type(zlib.crc32(data)))
-                        msg = {"type": "msg", "seq": self.send_sequence, "data": data} #"checksum": str(zlib.crc32(data))}
+                        msg = {"type": "msg", "seq": self.send_sequence, "data": data, "checksum": zlib.crc32(str.encode(data))}
                         self.log("Sending message '%s'" % msg)
                         self.send(msg)
                         self.send_sequence += 1
