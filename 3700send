@@ -65,7 +65,9 @@ class Sender:
                         weighted_new_rtt = 0.2 * new_rtt
                         weigted_curr_rtt = 0.8 * self.rtt
                         self.rtt = weighted_new_rtt + weigted_curr_rtt
-                        self.log("UPDATING RTT ----------- " + str(self.rtt))
+                        # Modify the window size since successful transmission
+                        self.window += 1
+                        self.log("GROWING WINDWO SIZE ------------ " + str(self.window))
 
                 # if we are sending 
                 elif conn == sys.stdin:
@@ -97,6 +99,9 @@ class Sender:
                     self.send(self.packet_log[i])
                     self.rtt_log[i] = time.time()
                     self.log("Resending message '%s'" % self.packet_log[i])
+                    # Modify the window size since transmission fail
+                    self.window = math.ceil(self.window / 2)
+                    self.log("SHRINKING WINDWO SIZE ------------ " + str(self.window))
                             
             if self.curr_packets < self.window:
                 self.waiting = False
