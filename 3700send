@@ -35,7 +35,6 @@ class Sender:
     def send(self, message):
         self.socket.sendto(json.dumps(message).encode('utf-8'), (self.host, self.remote_port))
         self.curr_packets += 1
-        self.send_sequence += 1
 
     def run(self):
         while True:
@@ -60,8 +59,8 @@ class Sender:
                         # we recieved an ack for a complete transmission, so decrement the number of packets currently in the network 
                         self.curr_packets -= 1
                         # the message has been correctly ack'd 
-                        for entry in self.ack_table :
-                            self.log("Ack: " + str(entry) + " " + str(self.ack_table[msg_dict["seq"]]))
+                        # for entry in self.ack_table :
+                        #     self.log("Ack: " + str(entry) + " " + str(self.ack_table[msg_dict["seq"]]))
 
                         self.ack_table[msg_dict["seq"]] = True
                         # ack the ack message from recv so we can tell if an ack has been dropped 
@@ -83,11 +82,11 @@ class Sender:
                         msg = { "type": "msg", "seq": self.send_sequence, "data": data }
                         self.log("Sending message '%s'" % msg)
                         self.send(msg)
+                        self.send_sequence += 1
                         # init ack'd list for specific ack to false 
                         self.ack_table.append(False)
                         # save a copy of the sent message 
                         self.packet_log.append(msg)
-
                         # this gets the start time of when the message was sent 
                         curr_time = time.time()
                         self.rrt_log.append(curr_time)
