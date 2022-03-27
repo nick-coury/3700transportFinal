@@ -44,7 +44,7 @@ At a high level, here was our approach:
 
 ## Challenges 
 
-Our biggest challenge in this assignment was catching dropped packets. 
+Our biggest challenge in this assignment was catching dropped packets. We found this particularly hard because it made us question our implementation of selective acks. 
 
 ## Program Features
 
