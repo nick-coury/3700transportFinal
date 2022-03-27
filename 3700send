@@ -60,7 +60,7 @@ class Sender:
                         self.curr_packets -= 1
                         # the message has been correctly ack'd 
                         self.ack_table[msg_dict["seq"]] = True
-                        self.log(self.curr_packets)
+                        self.log("CURRENT PACKETS IN NETWORK--------- " + str(self.curr_packets))
 
                 # if we are sending 
                 elif conn == sys.stdin:
