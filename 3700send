@@ -65,7 +65,7 @@ class Sender:
                         weighted_new_rtt = 0.2 * new_rtt
                         weigted_curr_rtt = 0.8 * self.rtt
                         self.rtt = weighted_new_rtt + weigted_curr_rtt
-                        self.log("UPDATING RTT ----------- " + self.rtt)
+                        self.log("UPDATING RTT ----------- " + str(self.rtt))
 
                 # if we are sending 
                 elif conn == sys.stdin:
