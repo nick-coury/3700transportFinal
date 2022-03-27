@@ -60,6 +60,9 @@ class Sender:
                         # we recieved an ack for a complete transmission, so decrement the number of packets currently in the network 
                         self.curr_packets -= 1
                         # the message has been correctly ack'd 
+                        for entry in self.ack_table :
+                            self.log("Ack: " + str(entry) + " " + self.ack_table[msg_dict["seq"]])
+
                         self.ack_table[msg_dict["seq"]] = True
                         # ack the ack message from recv so we can tell if an ack has been dropped 
                         #msg = {"type" : "ack", "ack_seq" : msg_dict["ack_seq"]}
