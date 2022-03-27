@@ -11,7 +11,8 @@ class Sender:
         self.log("Sender starting up using port %s" % self.remote_port)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind(('0.0.0.0', 0))
-        self.waiting = False
+
+        self.waiting = False # Defines if our sender needs to wait to send a packet or not
 
         self.window =  4 # window represents the maximum number of packets allowed in the network at one time, initilizes to 4
         self.curr_packets = 0 # this is a dynamic counter that continuously counts how many packets are in the network 
@@ -27,35 +28,34 @@ class Sender:
         self.rtt_log = [] # Keeps a log of all messages sent by the sender
         self.rtt = 1 # Estimate of the rtt of a packet, initilizes to 1
 
-
+    # Logs a message for our sender
     def log(self, message):
         sys.stderr.write(message + "\n")
         sys.stderr.flush()
 
+    # Sends a message
     def send(self, message):
         self.socket.sendto(json.dumps(message).encode('utf-8'), (self.host, self.remote_port))
         self.curr_packets += 1
 
+    # Main Loop
     def run(self):
         while True:
-            #self.log("*")
             sockets = [self.socket, sys.stdin] if not self.waiting else [self.socket]
             socks = select.select(sockets, [], [], 0.1)[0]
             for conn in socks:
 
-                # if we are receiving an ack message 
+                # if we are receiving an message 
                 if conn == self.socket:
                     k, addr = conn.recvfrom(65535)
                     try:
                         msg = k.decode('utf-8')
                         msg_dict = json.loads(msg)
-                        
-                        #print("-----ack seq num: " + msg)
 
                         # if we haven't received the ack before 
                         if msg_dict["seq"] not in self.recv_acks: #== self.ack_send_sequence:
                             self.log("Received message '%s'" % msg)
-                            # the message has been correctly ack'd 
+                            # Set that the message has been correctly ack'd 
                             self.ack_table[msg_dict["seq"]] = True
                             # Modify the RTT based on the most recent packet to come in (80/20)
                             new_rtt = time.time() - self.rtt_log[msg_dict["seq"]]
@@ -74,13 +74,12 @@ class Sender:
 
                 # if we are sending 
                 elif conn == sys.stdin:
-                    # read in the data 
                     data = sys.stdin.read(DATA_SIZE)
                     # if no more data and no packets in the network then exit
                     if len(data) == 0 and (self.curr_packets == 0):
                         self.log("All done!")                         
                         sys.exit(0)
-                    # if more data     
+                    # if more data needs to be sent   
                     elif (len(data) != 0):
                         # Send a message
                         msg = {"type": "msg", "seq": self.send_sequence, "data": data, "checksum": zlib.crc32(str.encode(data))}
@@ -92,19 +91,22 @@ class Sender:
                         # save a copy of the sent message 
                         self.packet_log.append(msg)
                         # this gets the start time of when the message was sent 
-                        curr_time = time.time()
-                        self.rtt_log.append(curr_time)
-                        
+                        self.rtt_log.append(time.time())
+
+            # See if there are packets that need to be retransmitted            
             for i in range(len(self.ack_table)):
                 if(time.time() - self.rtt_log[i] >= self.rtt * 2) and not self.ack_table[i]:
-                    # because we know a packet has been dropped, we can decrement the number of packets currently in the network 
+                    # because we know a packet has been dropped, 
+                    #   we can decrement the number of packets currently in the network 
                     self.curr_packets -= 1
+                    # Log the new time
                     self.send(self.packet_log[i])
                     self.rtt_log[i] = time.time()
                     self.log("Resending message '%s'" % self.packet_log[i])
                     # Modify the window size since transmission fail
                     self.window = math.ceil(self.window / 2)
-                            
+
+            # Determines if we need to wait or not based on packets in the network                
             if self.curr_packets < self.window:
                 self.waiting = False
             else:

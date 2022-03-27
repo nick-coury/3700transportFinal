@@ -11,21 +11,22 @@ class Receiver:
 
         self.remote_host = None
         self.remote_port = None
-
-        self.ack_recv_sequence = 0
         
-        self.buffer = []
-        self.print_count = 0
+        self.buffer = [] # Holds all messages that have not been processed
+        self.print_count = 0 # Determines what we next message needs to be processed next
 
-        self.recv_msg = []
+        self.recv_msg = [] # Keeps a log of all messages that have been recieved
 
+    # Sends a message
     def send(self, message):
         self.socket.sendto(json.dumps(message).encode('utf-8'), (self.remote_host, self.remote_port))
 
+    # Logs a message for our Receiver
     def log(self, message):
         sys.stderr.write(message + "\n")
         sys.stderr.flush()
 
+    # Debugging function to see what is in our buffer
     def flush_buffer(self):
         sys.stderr.write("-----------BUFFER----------- \n")
         for n in self.buffer:
@@ -33,6 +34,7 @@ class Receiver:
         sys.stderr.write("\n ---------------------------- \n")
         sys.stderr.flush()
 
+    # Main Loop
     def run(self):
         while True:
             socks = select.select([self.socket], [], [])[0]
@@ -46,7 +48,6 @@ class Receiver:
 
                 try:
                     msg = json.loads(data.decode('utf-8'))
-                    self.log("------ RECIEVED A NEW PACKET " + str(msg["seq"]))
                     # Assuming the message is not corrupted, then ... 
                     if msg["checksum"] == zlib.crc32(str.encode(msg["data"])):
                         # upon receiving a message, send an ack message
@@ -57,7 +58,6 @@ class Receiver:
                             if int(msg["seq"]) >= self.print_count:
                                 self.buffer.append(msg)
                                 self.buffer.sort(key=lambda x: x["seq"])
-                                self.flush_buffer()
                                 self.recv_msg.append(msg)
                 except:
                     # If we hit this, we know there was an error so ignore the message
