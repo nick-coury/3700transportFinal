@@ -44,29 +44,26 @@ class Receiver:
                     self.remote_host = addr[0]
                     self.remote_port = addr[1]
 
-                # msg = type, seq, data 
-                msg = json.loads(data.decode('utf-8'))
-                self.log("------ RECIEVED A NEW PACKET " + str(msg["seq"]))
-                # Assuming the message is not corrupted, then ... 
-                if msg["checksum"] == zlib.crc32(str.encode(msg["data"])):
-                    # upon receiving a message, send an ack message
-                    self.send({"type": "ack", "seq": msg["seq"]})
-                    # Add all messages to a list, eventually print out entries of list in sequence order
-                    # if we have already seen this message, then the repeated message indicates a dropped ack  
-                    if msg not in self.recv_msg: 
-                        if int(msg["seq"]) >= self.print_count:
-                            self.buffer.append(msg)
-                            self.buffer.sort(key=lambda x: x["seq"])
-                            self.flush_buffer()
-                            self.recv_msg.append(msg)
+                try:
+                    msg = json.loads(data.decode('utf-8'))
+                    self.log("------ RECIEVED A NEW PACKET " + str(msg["seq"]))
+                    # Assuming the message is not corrupted, then ... 
+                    if msg["checksum"] == zlib.crc32(str.encode(msg["data"])):
+                        # upon receiving a message, send an ack message
+                        self.send({"type": "ack", "seq": msg["seq"]})
+                        # Add all messages to a list, eventually print out entries of list in sequence order
+                        # if we have already seen this message, then the repeated message indicates a dropped ack  
+                        if msg not in self.recv_msg: 
+                            if int(msg["seq"]) >= self.print_count:
+                                self.buffer.append(msg)
+                                self.buffer.sort(key=lambda x: x["seq"])
+                                self.flush_buffer()
+                                self.recv_msg.append(msg)
+                except:
+                    # If we hit this, we know there was an error so ignore the message
+                    break
             
-            # print logic 
-            # for entry in self.buffer:
-            #     if entry["seq"] == self.print_count :
-            #         print(entry["data"], end='', flush=True)
-            #         self.print_count += 1
-
-            ###### OPTIMIZED ^^^^ ########
+            # Print everything we can in the buffer
             while self.buffer:
                 entry = self.buffer[0]
                 if(entry["seq"] == self.print_count):  

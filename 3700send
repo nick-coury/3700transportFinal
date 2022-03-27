@@ -46,28 +46,31 @@ class Sender:
                 # if we are receiving an ack message 
                 if conn == self.socket:
                     k, addr = conn.recvfrom(65535)
-                    msg = k.decode('utf-8')
-                    msg_dict = json.loads(msg)
-                    
-                    #print("-----ack seq num: " + msg)
+                    try:
+                        msg = k.decode('utf-8')
+                        msg_dict = json.loads(msg)
+                        
+                        #print("-----ack seq num: " + msg)
 
-                    # if we haven't received the ack before 
-                    if msg_dict["seq"] not in self.recv_acks: #== self.ack_send_sequence:
-                        # add the ack to the list of received ack's
-                        self.recv_acks.append(msg_dict["seq"]) 
-                        self.log("Received message '%s'" % msg)
-                        # we recieved an ack for a complete transmission, so decrement the number of packets currently in the network 
-                        self.curr_packets -= 1
-                        # the message has been correctly ack'd 
-                        self.ack_table[msg_dict["seq"]] = True
-                        # Modify the RTT based on the most recent packet to come in (80/20)
-                        new_rtt = time.time() - self.rtt_log[msg_dict["seq"]]
-                        weighted_new_rtt = 0.2 * new_rtt
-                        weigted_curr_rtt = 0.8 * self.rtt
-                        self.rtt = weighted_new_rtt + weigted_curr_rtt
-                        # Modify the window size since successful transmission
-                        self.window += 1
-                        self.log("GROWING WINDWO SIZE ------------ " + str(self.window))
+                        # if we haven't received the ack before 
+                        if msg_dict["seq"] not in self.recv_acks: #== self.ack_send_sequence:
+                            self.log("Received message '%s'" % msg)
+                            # the message has been correctly ack'd 
+                            self.ack_table[msg_dict["seq"]] = True
+                            # Modify the RTT based on the most recent packet to come in (80/20)
+                            new_rtt = time.time() - self.rtt_log[msg_dict["seq"]]
+                            weighted_new_rtt = 0.2 * new_rtt
+                            weigted_curr_rtt = 0.8 * self.rtt
+                            self.rtt = weighted_new_rtt + weigted_curr_rtt
+                            # Modify the window size since successful transmission
+                            self.window += 1
+                            # we recieved an ack for a complete transmission, so decrement the number of packets currently in the network 
+                            self.curr_packets -= 1
+                            # add the ack to the list of received ack's
+                            self.recv_acks.append(msg_dict["seq"]) 
+                    except:
+                        # If we hit this, we know there was an error so ignore the message
+                        break   
 
                 # if we are sending 
                 elif conn == sys.stdin:
@@ -101,7 +104,6 @@ class Sender:
                     self.log("Resending message '%s'" % self.packet_log[i])
                     # Modify the window size since transmission fail
                     self.window = math.ceil(self.window / 2)
-                    self.log("SHRINKING WINDWO SIZE ------------ " + str(self.window))
                             
             if self.curr_packets < self.window:
                 self.waiting = False
