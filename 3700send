@@ -62,8 +62,8 @@ class Sender:
                         # the message has been correctly ack'd 
                         self.ack_table[msg_dict["seq"]] = True
                         # ack the ack message from recv so we can tell if an ack has been dropped 
-                        msg = {"type" : "ack", "ack_seq" : msg_dict["ack_seq"]}
-                        self.send(msg)
+                        #msg = {"type" : "ack", "ack_seq" : msg_dict["ack_seq"]}
+                        #self.send(msg)
                         # increment the ack sequence 
                         self.ack_seq += 1
 
