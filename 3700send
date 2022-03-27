@@ -13,19 +13,19 @@ class Sender:
         self.socket.bind(('0.0.0.0', 0))
         self.waiting = False
 
-        # When changing to window greater than 2, it all breaks 
-
-        self.window =  4 # window represents the maximum number of packets allowed in the network at one time 
+        self.window =  4 # window represents the maximum number of packets allowed in the network at one time, initilizes to 4
         self.curr_packets = 0 # this is a dynamic counter that continuously counts how many packets are in the network 
 
         self.send_sequence = 0 # sequence number for sending messages 
         self.ack_seq = 0 # sequence number for receiving ack messages 
 
-        self.recv_acks = []
+        self.recv_acks = [] # Keeps a log of all acks that were sent to the sender
         self.ack_table = [] # T/F - Indication if the packet was recieved correctly
+
         self.packet_log = [] # Keeps a copy of all packets that we send out
-        self.rrt_log = []
-        self.rrt_max = 2
+
+        self.rtt_log = [] # Keeps a log of all messages sent by the sender
+        self.rtt = 1 # Estimate of the rtt of a packet, initilizes to 1
 
 
     def log(self, message):
@@ -60,6 +60,11 @@ class Sender:
                         self.curr_packets -= 1
                         # the message has been correctly ack'd 
                         self.ack_table[msg_dict["seq"]] = True
+                        # Modify the RTT based on the most recent packet to come in (80/20)
+                        new_rtt = time.time() - self.rtt_log[msg_dict["seq"]]
+                        weighted_new_rtt = 0.2 * new_rtt
+                        weigted_curr_rtt = 0.8 * self.rtt
+                        self.rtt = weighted_new_rtt + weigted_curr_rtt
 
                 # if we are sending 
                 elif conn == sys.stdin:
@@ -71,7 +76,7 @@ class Sender:
                         sys.exit(0)
                     # if more data     
                     elif (len(data) != 0):
-                        #self.log("TYPE Of CHECKSUM: " + type(zlib.crc32(data)))
+                        # Send a message
                         msg = {"type": "msg", "seq": self.send_sequence, "data": data, "checksum": zlib.crc32(str.encode(data))}
                         self.log("Sending message '%s'" % msg)
                         self.send(msg)
@@ -82,19 +87,15 @@ class Sender:
                         self.packet_log.append(msg)
                         # this gets the start time of when the message was sent 
                         curr_time = time.time()
-                        self.rrt_log.append(curr_time)
+                        self.rtt_log.append(curr_time)
                         
             for i in range(len(self.ack_table)):
-                # self.log("message #: " + str(i))
-                # self.log("*** is the time >= 1 * 2? " + str(time.time() - self.rrt_log[i]))
-                # self.log("has it been ack'ed correctly? " + str(self.ack_table[i]))
-                if(time.time() - self.rrt_log[i] >= self.rrt_max) and not self.ack_table[i]:
+                if(time.time() - self.rtt_log[i] >= self.rtt * 2) and not self.ack_table[i]:
                     # because we know a packet has been dropped, we can decrement the number of packets currently in the network 
                     self.curr_packets -= 1
                     self.send(self.packet_log[i])
-                    self.rrt_log[i] = time.time()
-                    self.log("---------------- RETRANSMITTING PACKET " + str(i))
-                    self.log("Sending message '%s'" % self.packet_log[i])
+                    self.rtt_log[i] = time.time()
+                    self.log("Resending message '%s'" % self.packet_log[i])
                             
             if self.curr_packets < self.window:
                 self.waiting = False
