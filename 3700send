@@ -90,9 +90,9 @@ class Sender:
                         self.rrt_log.append(curr_time)
                         
                 for i in range(len(self.ack_table)):
-                    self.log("message #: " + str(i))
-                    self.log("*** is the time >= 1 * 2? " + str(time.time() - self.rrt_log[i]))
-                    self.log("has it been ack'ed correctly? " + str(self.ack_table[i]))
+                    # self.log("message #: " + str(i))
+                    # self.log("*** is the time >= 1 * 2? " + str(time.time() - self.rrt_log[i]))
+                    # self.log("has it been ack'ed correctly? " + str(self.ack_table[i]))
                     if(time.time() - self.rrt_log[i] >= self.rrt_max) and not self.ack_table[i]:
                             self.send(self.packet_log[i])
                             self.rrt_log[i] = time.time()
