@@ -97,7 +97,7 @@ class Sender:
                             self.send(self.packet_log[i])
                             self.rrt_log[i] = time.time()
                             self.log("---------------- RETRANSMITTING PACKET " + str(i))
-                            self.log("Sending message '%s'" % msg)
+                            self.log("Sending message '%s'" % self.packet_log[i])
                                 
                 if self.curr_packets < self.window:
                     self.waiting = False
