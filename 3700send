@@ -18,7 +18,6 @@ class Sender:
         self.curr_packets = 0 # this is a dynamic counter that continuously counts how many packets are in the network 
 
         self.send_sequence = 0 # sequence number for sending messages 
-        self.ack_seq = 0 # sequence number for receiving ack messages 
 
         self.recv_acks = [] # Keeps a log of all acks that were sent to the sender
         self.ack_table = [] # T/F - Indication if the packet was recieved correctly
@@ -53,7 +52,7 @@ class Sender:
                         msg_dict = json.loads(msg)
 
                         # if we haven't received the ack before 
-                        if msg_dict["seq"] not in self.recv_acks: #== self.ack_send_sequence:
+                        if msg_dict["seq"] not in self.recv_acks:
                             self.log("Received message '%s'" % msg)
                             # Set that the message has been correctly ack'd 
                             self.ack_table[msg_dict["seq"]] = True
