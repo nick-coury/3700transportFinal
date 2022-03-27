@@ -1,0 +1,113 @@
+#!/usr/bin/env -S python3 -u
+
+import argparse, socket, time, json, select, struct, sys, math
+
+DATA_SIZE = 1375
+
+class Sender:
+    def __init__(self, host, port):
+        self.host = host
+        self.remote_port = int(port)
+        self.log("Sender starting up using port %s" % self.remote_port)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind(('0.0.0.0', 0))
+        self.waiting = False
+
+        # When changing to window greater than 2, it all breaks 
+
+        self.window =  4 # window represents the maximum number of packets allowed in the network at one time 
+        self.curr_packets = 0 # this is a dynamic counter that continuously counts how many packets are in the network 
+
+        self.send_sequence = 0 # sequence number for sending messages 
+        self.ack_seq = 0 # sequence number for receiving ack messages 
+
+        self.recv_acks = []
+        self.ack_table = [] # T/F - Indication if the packet was recieved correctly
+        self.packet_log = [] # Keeps a copy of all packets that we send out
+        self.rrt_log = []
+        self.rrt_max = 2
+
+
+    def log(self, message):
+        sys.stderr.write(message + "\n")
+        sys.stderr.flush()
+
+    def send(self, message):
+        self.socket.sendto(json.dumps(message).encode('utf-8'), (self.host, self.remote_port))
+        self.curr_packets += 1
+        self.send_sequence += 1
+
+    def run(self):
+        while True:
+            #self.log("*")
+            sockets = [self.socket, sys.stdin] if not self.waiting else [self.socket]
+            socks = select.select(sockets, [], [], 0.1)[0]
+            for conn in socks:
+
+                # if we are receiving an ack message 
+                if conn == self.socket:
+                    k, addr = conn.recvfrom(65535)
+                    msg = k.decode('utf-8')
+                    msg_dict = json.loads(msg)
+                    
+                    #print("-----ack seq num: " + msg)
+
+                    # if we haven't received the ack before 
+                    if msg_dict["seq"] not in self.recv_acks: #== self.ack_send_sequence:
+                        # add the ack to the list of received ack's
+                        self.recv_acks.append(msg_dict["seq"]) 
+                        self.log("Received message '%s'" % msg)
+                        # we recieved an ack for a complete transmission, so decrement the number of packets currently in the network 
+                        self.curr_packets -= 1
+                        # the message has been correctly ack'd 
+                        self.ack_table[msg_dict["seq"]] = True
+                        # ack the ack message from recv so we can tell if an ack has been dropped 
+                        msg = {"type" : "ack", "ack_seq" : msg_dict["ack_seq"]}
+                        self.send(msg)
+                        # increment the ack sequence 
+                        self.ack_seq += 1
+
+                # if we are sending 
+                elif conn == sys.stdin:
+                    # read in the data 
+                    data = sys.stdin.read(DATA_SIZE)
+                    # if no more data and no packets in the network then exit
+                    if len(data) == 0 and (self.curr_packets == 0):
+                        self.log("All done!")                         
+                        sys.exit(0)
+                    # if more data     
+                    elif (len(data) != 0):
+                        msg = { "type": "msg", "seq": self.send_sequence, "data": data }
+                        self.log("Sending message '%s'" % msg)
+                        self.send(msg)
+                        # init ack'd list for specific ack to false 
+                        self.ack_table.append(False)
+                        # save a copy of the sent message 
+                        self.packet_log.append(msg)
+
+                        # this gets the start time of when the message was sent 
+                        curr_time = time.time()
+                        self.rrt_log.append(curr_time)
+                        
+                for i in range(len(self.ack_table)):
+                    self.log("message #: " + str(i))
+                    self.log("*** is the time >= 1 * 2? " + str(time.time() - self.rrt_log[i]))
+                    self.log("has it been ack'ed correctly? " + str(self.ack_table[i]))
+                    if(time.time() - self.rrt_log[i] >= self.rrt_max) and not self.ack_table[i]:
+                            self.send(self.packet_log[i])
+                            self.rrt_log[i] = time.time()
+                            self.log("---------------- RETRANSMITTING PACKET " + str(i))
+                                
+                if self.curr_packets < self.window:
+                    self.waiting = False
+                else:
+                    self.waiting = True
+        return
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='send data')
+    parser.add_argument('host', type=str, help="Remote host to connect to")
+    parser.add_argument('port', type=int, help="UDP port number to connect to")
+    args = parser.parse_args()
+    sender = Sender(args.host, args.port)
+    sender.run()
