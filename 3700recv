@@ -47,7 +47,7 @@ class Receiver:
                 # msg = type, seq, data 
                 msg = json.loads(data.decode('utf-8'))
                 self.log("------ RECIEVED A NEW PACKET " + str(msg["seq"]))
-                # Assuming the message is not corrupted... 
+                # Assuming the message is not corrupted, then ... 
                 if msg["checksum"] == zlib.crc32(msg["data"]):
                     # upon receiving a message, send an ack message
                     self.send({"type": "ack", "seq": msg["seq"]})

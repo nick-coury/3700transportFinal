@@ -71,7 +71,7 @@ class Sender:
                         sys.exit(0)
                     # if more data     
                     elif (len(data) != 0):
-                        msg = {"type": "msg", "seq": self.send_sequence, "data": data, "checksum": zlib.crc32(data)}
+                        msg = {"type": "msg", "seq": self.send_sequence, "data": data, "checksum": int(zlib.crc32(data))}
                         self.log("Sending message '%s'" % msg)
                         self.send(msg)
                         self.send_sequence += 1
